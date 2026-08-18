@@ -51,8 +51,10 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       val releaseKeystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
       val releaseKeystoreFile = file(releaseKeystorePath)
-      if (releaseKeystoreFile.exists()) {
-        signingConfig = signingConfigs.getByName("release")
+      signingConfig = if (releaseKeystoreFile.exists()) {
+        signingConfigs.getByName("release")
+      } else {
+        signingConfigs.getByName("debugConfig")
       }
     }
     debug { signingConfig = signingConfigs.getByName("debugConfig") }

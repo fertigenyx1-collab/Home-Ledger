@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: 'Build Type'
+        description: 'Build Type (release or debug)'
         required: true
         default: 'release'
         type: choice
@@ -48,15 +48,22 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Prepare Debug Keystore
+        run: |
+          if [ -f "debug.keystore.base64" ] && [ ! -f "debug.keystore" ]; then
+            echo "Decoding debug.keystore from debug.keystore.base64..."
+            base64 --decode debug.keystore.base64 > debug.keystore
+          fi
+
       - name: Prepare Gradle Wrapper
         run: |
           if [ ! -f "gradlew" ]; then
-            echo "gradlew not found, generating wrapper using gradle..."
+            echo "Generating Gradle wrapper..."
             gradle wrapper
           fi
           chmod +x gradlew
 
-      - name: Setup Keystore (if provided in GitHub Secrets)
+      - name: Setup Signing Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
@@ -64,22 +71,14 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "Decoding release keystore from secrets..."
+            echo "Decoding custom release keystore from secrets..."
             echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release-key.jks"
             echo "KEYSTORE_PATH=$RUNNER_TEMP/release-key.jks" >> $GITHUB_ENV
             echo "STORE_PASSWORD=$STORE_PASSWORD" >> $GITHUB_ENV
             echo "KEY_ALIAS=${KEY_ALIAS:-upload}" >> $GITHUB_ENV
             echo "KEY_PASSWORD=${KEY_PASSWORD:-$STORE_PASSWORD}" >> $GITHUB_ENV
           else
-            echo "No custom release keystore secret found. Generating temporary signing key for CI release..."
-            keytool -genkey -v -keystore "$RUNNER_TEMP/ci-release.jks" \
-              -alias ci-key -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass android -keypass android \
-              -dname "CN=LifeRemind, OU=Android, O=LifeRemind, L=City, S=State, C=US"
-            echo "KEYSTORE_PATH=$RUNNER_TEMP/ci-release.jks" >> $GITHUB_ENV
-            echo "STORE_PASSWORD=android" >> $GITHUB_ENV
-            echo "KEY_ALIAS=ci-key" >> $GITHUB_ENV
-            echo "KEY_PASSWORD=android" >> $GITHUB_ENV
+            echo "No custom release keystore provided. Using debug keystore configuration."
           fi
 
       - name: Determine Version
@@ -88,36 +87,47 @@ jobs:
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VERSION_NAME="${GITHUB_REF#refs/tags/}"
           else
-            # Extract from git or use default version with commit SHA
             COMMIT_HASH=$(git rev-parse --short HEAD)
             VERSION_NAME="v1.0.0-${COMMIT_HASH}"
           fi
           echo "VERSION=$VERSION_NAME" >> $GITHUB_OUTPUT
-          echo "Building for Version: $VERSION_NAME"
+          echo "Version determined: $VERSION_NAME"
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace
+      - name: Build APK
+        run: |
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
+          if [ "$BUILD_TYPE" = "debug" ]; then
+            echo "Building Debug APK..."
+            ./gradlew assembleDebug --stacktrace
+          else
+            echo "Building Release APK..."
+            ./gradlew assembleRelease --stacktrace
+          fi
 
-      - name: Locate and Rename APK
+      - name: Locate and Package APK
         id: apk_step
         run: |
           VERSION="${{ steps.version_step.outputs.VERSION }}"
-          OUTPUT_DIR="app/build/outputs/apk/release"
           
-          # Find any generated .apk file
-          APK_FILE=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          # Locate any built APK file
+          APK_FILE=$(find app/build/outputs/apk -name "*.apk" -not -name "*unaligned*" | head -n 1)
+          
+          if [ -z "$APK_FILE" ]; then
+            echo "Searching all build outputs for APK..."
+            APK_FILE=$(find . -name "*.apk" | head -n 1)
+          fi
           
           if [ -z "$APK_FILE" ]; then
             echo "Error: No APK file found in build outputs!"
             exit 1
           fi
           
+          mkdir -p build-artifacts
           TARGET_NAME="LifeRemind-${VERSION}.apk"
-          TARGET_PATH="app/build/outputs/apk/${TARGET_NAME}"
+          TARGET_PATH="build-artifacts/${TARGET_NAME}"
           
-          echo "Found generated APK at: $APK_FILE"
           cp "$APK_FILE" "$TARGET_PATH"
-          echo "Renamed APK to: $TARGET_PATH"
+          echo "Successfully created APK: $TARGET_PATH"
           
           echo "APK_PATH=$TARGET_PATH" >> $GITHUB_OUTPUT
           echo "APK_NAME=$TARGET_NAME" >> $GITHUB_OUTPUT
@@ -125,7 +135,7 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.apk_step.outputs.APK_NAME }}
+          name: LifeRemind-APK
           path: ${{ steps.apk_step.outputs.APK_PATH }}
           retention-days: 30
 
