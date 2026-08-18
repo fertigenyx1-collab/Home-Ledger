@@ -1,0 +1,6 @@
+{
+  "name": "LifeRemind",
+  "description": "Personal Life & Payment Reminder Manager for expenses, recurring bills, appointments, documents, and tasks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
