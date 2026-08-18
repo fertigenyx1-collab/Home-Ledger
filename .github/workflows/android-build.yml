@@ -1,0 +1,143 @@
+name: Android Build & Release APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build Type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare Gradle Wrapper
+        run: |
+          if [ ! -f "gradlew" ]; then
+            echo "gradlew not found, generating wrapper using gradle..."
+            gradle wrapper
+          fi
+          chmod +x gradlew
+
+      - name: Setup Keystore (if provided in GitHub Secrets)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Decoding release keystore from secrets..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release-key.jks"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/release-key.jks" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=$STORE_PASSWORD" >> $GITHUB_ENV
+            echo "KEY_ALIAS=${KEY_ALIAS:-upload}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${KEY_PASSWORD:-$STORE_PASSWORD}" >> $GITHUB_ENV
+          else
+            echo "No custom release keystore secret found. Generating temporary signing key for CI release..."
+            keytool -genkey -v -keystore "$RUNNER_TEMP/ci-release.jks" \
+              -alias ci-key -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=LifeRemind, OU=Android, O=LifeRemind, L=City, S=State, C=US"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/ci-release.jks" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=android" >> $GITHUB_ENV
+            echo "KEY_ALIAS=ci-key" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=android" >> $GITHUB_ENV
+          fi
+
+      - name: Determine Version
+        id: version_step
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION_NAME="${GITHUB_REF#refs/tags/}"
+          else
+            # Extract from git or use default version with commit SHA
+            COMMIT_HASH=$(git rev-parse --short HEAD)
+            VERSION_NAME="v1.0.0-${COMMIT_HASH}"
+          fi
+          echo "VERSION=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "Building for Version: $VERSION_NAME"
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Locate and Rename APK
+        id: apk_step
+        run: |
+          VERSION="${{ steps.version_step.outputs.VERSION }}"
+          OUTPUT_DIR="app/build/outputs/apk/release"
+          
+          # Find any generated .apk file
+          APK_FILE=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          
+          if [ -z "$APK_FILE" ]; then
+            echo "Error: No APK file found in build outputs!"
+            exit 1
+          fi
+          
+          TARGET_NAME="LifeRemind-${VERSION}.apk"
+          TARGET_PATH="app/build/outputs/apk/${TARGET_NAME}"
+          
+          echo "Found generated APK at: $APK_FILE"
+          cp "$APK_FILE" "$TARGET_PATH"
+          echo "Renamed APK to: $TARGET_PATH"
+          
+          echo "APK_PATH=$TARGET_PATH" >> $GITHUB_OUTPUT
+          echo "APK_NAME=$TARGET_NAME" >> $GITHUB_OUTPUT
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk_step.outputs.APK_NAME }}
+          path: ${{ steps.apk_step.outputs.APK_PATH }}
+          retention-days: 30
+
+      - name: Create GitHub Release and Attach APK
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk_step.outputs.APK_PATH }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

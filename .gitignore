@@ -1,18 +1,40 @@
-*.iml
+# Built application files
+*.apk
+*.aar
+*.aab
+
+# Keystore files, certificates, & signing credentials (NEVER commit these!)
+*.jks
+*.keystore
+*.key
+*.pepk
+*.p12
+*.bks
+keystore.properties
+debug.keystore
+debug.keystore.base64
+my-upload-key.jks
+upload-keystore.jks
+
+# Environment variables & API keys
+.env
+.env.local
+.env.*.local
+local.properties
+
+# Gradle & Kotlin caches
 .gradle
 .kotlin
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
 /build
+/*/build
 /captures
 .externalNativeBuild
 .cxx
-local.properties
-.env
-debug.keystore
+
+# IDE & Editor files
+*.iml
+.idea
+.DS_Store
+
+# Google Services (if containing private client IDs/certs)
+# google-services.json
