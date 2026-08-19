@@ -28,6 +28,7 @@ fun ReportsScreen(
     expenses: List<ExpenseEntity>,
     bills: List<BillEntity>,
     currencySymbol: String,
+    onExportClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val totalExpenseSpent = expenses.sumOf { it.amount }
@@ -188,6 +189,56 @@ fun ReportsScreen(
                                     modifier = Modifier.weight(1.2f)
                                 )
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Export & Download APK Card
+        if (onExportClick != null) {
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                SectionHeader(
+                    title = "Export & App Release"
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("📦", fontSize = 28.sp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Download Installable Release APK",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Text(
+                                    text = "Compiled with Gradle assembleRelease • GitHub Actions ready",
+                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = onExportClick,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("reports_export_apk_button")
+                        ) {
+                            Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Export & Download APK Options", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

@@ -35,6 +35,7 @@ fun LifeTopAppBar(
     title: String,
     subtitle: String? = null,
     onSettingsClick: () -> Unit,
+    onExportClick: (() -> Unit)? = null,
     onSearchClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -90,6 +91,18 @@ fun LifeTopAppBar(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (onExportClick != null) {
+                        IconButton(
+                            onClick = onExportClick,
+                            modifier = Modifier.testTag("export_menu_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.FileDownload,
+                                contentDescription = "Export & Download APK",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = onSettingsClick,
                         modifier = Modifier.testTag("settings_button")

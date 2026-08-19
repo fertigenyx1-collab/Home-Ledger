@@ -85,6 +85,7 @@ fun LifeRemindApp(
                     AppTab.REPORTS -> "Spending & Liability Breakdown"
                 },
                 onSettingsClick = { viewModel.setShowSettings(true) },
+                onExportClick = { viewModel.setShowExport(true) },
                 modifier = Modifier.testTag("app_top_bar")
             )
         },
@@ -150,6 +151,13 @@ fun LifeRemindApp(
                                     text = { Text("📊 Spending Reports & Overview") },
                                     onClick = {
                                         viewModel.selectTab(AppTab.REPORTS)
+                                        moreMenuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("📦 Export & Download APK") },
+                                    onClick = {
+                                        viewModel.setShowExport(true)
                                         moreMenuExpanded = false
                                     }
                                 )
@@ -268,7 +276,8 @@ fun LifeRemindApp(
                 AppTab.REPORTS -> ReportsScreen(
                     expenses = expenses,
                     bills = bills,
-                    currencySymbol = uiState.currencySymbol
+                    currencySymbol = uiState.currencySymbol,
+                    onExportClick = { viewModel.setShowExport(true) }
                 )
             }
         }
@@ -354,7 +363,14 @@ fun LifeRemindApp(
             onSelectCurrency = { viewModel.setCurrencySymbol(it) },
             onReloadDemoData = { viewModel.reloadDemoData() },
             onAddFamilyMemberClick = { viewModel.setShowAddFamilyMember(true) },
+            onExportClick = { viewModel.setShowExport(true) },
             onDismiss = { viewModel.setShowSettings(false) }
+        )
+    }
+
+    if (uiState.showExportDialog) {
+        ExportApkDialog(
+            onDismiss = { viewModel.setShowExport(false) }
         )
     }
 

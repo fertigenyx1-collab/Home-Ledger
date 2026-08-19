@@ -84,6 +84,24 @@ secrets {
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
+tasks.matching { it.name.contains("ArtProfile") }.configureEach {
+  enabled = false
+}
+
+tasks.register<Copy>("copyApkToProjectRoot") {
+  from(layout.buildDirectory.dir("outputs/apk"))
+  into(rootProject.layout.projectDirectory.dir("release"))
+  include("**/*.apk")
+  eachFile {
+    path = name
+  }
+  includeEmptyDirs = false
+}
+
+tasks.matching { it.name.startsWith("assemble") }.configureEach {
+  finalizedBy("copyApkToProjectRoot")
+}
+
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {

@@ -1,8 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/ic_launcher_foreground_img"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Calendar Card Base -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M30,30 h48 a6,6 0 0,1 6,6 v42 a6,6 0 0,1 -6,6 h-48 a6,6 0 0,1 -6,-6 v-42 a6,6 0 0,1 6,-6 z" />
+
+    <!-- Calendar Header (Indigo / Blue) -->
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M30,30 h48 a6,6 0 0,1 6,6 v12 h-60 v-12 a6,6 0 0,1 6,-6 z" />
+
+    <!-- Calendar Ring Clips -->
+    <path
+        android:fillColor="#F8FAFC"
+        android:pathData="M38,26 h4 v8 h-4 z M66,26 h4 v8 h-4 z" />
+
+    <!-- Checkmark Badge in Green -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M54,64 m-14,0 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0" />
+
+    <!-- White Checkmark -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,64 l4,4 l9,-9 l1.5,1.5 l-10.5,10.5 l-5.5,-5.5 z" />
+
+    <!-- Bell / Reminder Accent Dot -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M76,34 m-3.5,0 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0" />
+</vector>

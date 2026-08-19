@@ -63,6 +63,7 @@ data class LifeUiState(
     val showAddDocumentDialog: Boolean = false,
     val showAddFamilyMemberDialog: Boolean = false,
     val showSettingsDialog: Boolean = false,
+    val showExportDialog: Boolean = false,
     val showQuickActionSheet: Boolean = false,
     val successToastMessage: String? = null
 )
@@ -139,6 +140,7 @@ class LifeViewModel(application: Application) : AndroidViewModel(application) {
     fun setShowAddDocument(show: Boolean) { _uiState.value = _uiState.value.copy(showAddDocumentDialog = show) }
     fun setShowAddFamilyMember(show: Boolean) { _uiState.value = _uiState.value.copy(showAddFamilyMemberDialog = show) }
     fun setShowSettings(show: Boolean) { _uiState.value = _uiState.value.copy(showSettingsDialog = show) }
+    fun setShowExport(show: Boolean) { _uiState.value = _uiState.value.copy(showExportDialog = show) }
     fun setShowQuickActionSheet(show: Boolean) { _uiState.value = _uiState.value.copy(showQuickActionSheet = show) }
 
     fun openPayBillDialog(bill: BillEntity) {

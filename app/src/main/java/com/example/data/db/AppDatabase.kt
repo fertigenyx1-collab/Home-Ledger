@@ -58,7 +58,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "life_remind_database"
                 )
                 .addCallback(AppDatabaseCallback(scope))
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 INSTANCE = instance
                 instance

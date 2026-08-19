@@ -9,7 +9,7 @@ import java.util.Locale
 object DateTimeUtils {
 
     fun formatCurrency(amount: Double, symbol: String = "₹"): String {
-        val format = NumberFormat.getNumberInstance(Locale("en", "IN"))
+        val format = NumberFormat.getNumberInstance(Locale.forLanguageTag("en-IN"))
         format.minimumFractionDigits = if (amount % 1.0 == 0.0) 0 else 2
         format.maximumFractionDigits = 2
         return "$symbol${format.format(amount)}"
