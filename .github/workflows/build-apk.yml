@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - master
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
@@ -18,20 +20,22 @@ on:
         type: choice
         options:
           - both
-          - release
           - debug
+          - release
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
-    name: Build Android APKs
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -39,47 +43,62 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Grant execute permission for gradlew
+      - name: Make gradlew executable
         run: chmod +x gradlew
 
       - name: Build Debug APK
-        if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == 'both' || github.event_name == 'push' || github.event_name == 'pull_request'
+        if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == 'both' || github.event.inputs.build_type == '' || github.event_name == 'push' || github.event_name == 'pull_request'
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Build Release APK
-        if: github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' || github.event_name == 'push' || github.event_name == 'pull_request'
+        if: github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' || github.event_name == 'push' || startsWith(github.ref, 'refs/tags/v')
         run: ./gradlew assembleRelease --stacktrace
 
-      - name: Verify APKs Exist
+      - name: Prepare APK Outputs
         run: |
-          mkdir -p output-artifacts
+          mkdir -p output-apks
           if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk output-artifacts/app-debug.apk
-            echo "Found debug APK: output-artifacts/app-debug.apk"
+            cp app/build/outputs/apk/debug/app-debug.apk output-apks/app-debug.apk
+            echo "Found debug APK: output-apks/app-debug.apk"
           fi
           if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
-            cp app/build/outputs/apk/release/app-release.apk output-artifacts/app-release.apk
-            echo "Found release APK: output-artifacts/app-release.apk"
+            cp app/build/outputs/apk/release/app-release.apk output-apks/app-release.apk
+            echo "Found release APK: output-apks/app-release.apk"
           fi
 
-      - name: Upload Debug APK Artifact
-        if: hashFiles('output-artifacts/app-debug.apk') != ''
+      - name: Upload Debug APK Artifact (android-apk)
+        if: hashFiles('output-apks/app-debug.apk') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: output-artifacts/app-debug.apk
+          name: android-apk
+          path: output-apks/app-debug.apk
           retention-days: 30
 
       - name: Upload Release APK Artifact
-        if: hashFiles('output-artifacts/app-release.apk') != ''
+        if: hashFiles('output-apks/app-release.apk') != ''
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: output-artifacts/app-release.apk
+          path: output-apks/app-release.apk
           retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            output-apks/app-release.apk
+            output-apks/app-debug.apk
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
