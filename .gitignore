@@ -31,6 +31,9 @@ local.properties
 .externalNativeBuild
 .cxx
 
+# Gradle Wrapper JAR (generated locally, causes validation issues in CI)
+gradle/wrapper/gradle-wrapper.jar
+
 # IDE & Editor files
 *.iml
 .idea
@@ -38,3 +41,7 @@ local.properties
 
 # Google Services (if containing private client IDs/certs)
 # google-services.json
+
+# Release directory
+release/
+build-artifacts/
