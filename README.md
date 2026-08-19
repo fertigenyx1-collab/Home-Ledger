@@ -4,118 +4,94 @@ LifeRemind is a personal life and payment reminder manager built with modern Kot
 
 ---
 
-## 🚀 Automated APK Generation with GitHub Actions
+## How to Build APK
 
-This repository is configured with a GitHub Actions workflow (`.github/workflows/android-build.yml`) that automatically builds, tests, signs, packages, and releases your Android APK.
+### 1. Build Automatically with GitHub Actions
 
----
-
-## 1. Pushing the Project to GitHub
-
-If you haven't pushed your code to GitHub yet, run the following commands in your terminal:
-
-```bash
-# Initialize git (if not already initialized)
-git init
-
-# Add all files to staging
-git add .
-
-# Create initial commit
-git commit -m "feat: Initial commit with LifeRemind and GitHub Actions workflow"
-
-# Rename branch to main
-git branch -M main
-
-# Add your GitHub repository remote
-git remote add origin https://github.com/<YOUR_USERNAME>/<YOUR_REPOSITORY>.git
-
-# Push to GitHub
-git push -u origin main
-```
-
----
-
-## 2. (Optional) Configuring Production Signing Secrets
-
-By default, the GitHub Actions workflow will automatically generate a valid signing key on CI so your APK builds and runs immediately.
-
-If you have your own production keystore file (`my-upload-key.jks`), you can add it securely as GitHub Secrets:
-
-1. Convert your keystore file to Base64 in your terminal:
+#### To Generate a Debug or Release APK (Artifact):
+1. Push your project to GitHub:
    ```bash
-   # On macOS / Linux:
-   base64 -i my-upload-key.jks | tr -d '\n' > keystore_base64.txt
-
-   # On Windows (PowerShell):
-   [Convert]::ToBase64String([IO.File]::ReadAllBytes("my-upload-key.jks")) | Set-Content keystore_base64.txt
+   git add .
+   git commit -m "feat: Prepare project for APK builds"
+   git push origin main
    ```
-2. In your GitHub repository, go to **Settings** > **Secrets and variables** > **Actions** > **New repository secret**.
-3. Add the following secrets:
-   - `KEYSTORE_BASE64`: The full base64 string from `keystore_base64.txt`
-   - `STORE_PASSWORD`: Your keystore password
-   - `KEY_ALIAS`: Your key alias (e.g. `upload`)
-   - `KEY_PASSWORD`: Your key password
-
-> 🔒 **Security note:** Never commit keystore files or passwords directly into git. All sensitive credentials are kept in `.gitignore`.
+2. Open your repository on **GitHub** → Click on the **Actions** tab.
+3. In the left sidebar, select **Build Android APK**.
+4. Click **Run workflow** → Select branch (`main`) → Click **Run workflow**.
+5. Wait 1–2 minutes for the build to finish with a green checkmark.
+6. Click on the successful workflow run.
+7. Scroll down to the **Artifacts** section at the bottom:
+   - Download **`app-debug`** (contains `app-debug.apk`)
+   - Download **`app-release`** (contains `app-release.apk`)
 
 ---
 
-## 3. How to Trigger APK Builds
+### 2. How to Create a GitHub Release with the APK
 
-### Option A: Automatic Build on Git Push (Artifact)
-Every time you push commits to `main` or open a Pull Request:
-1. GitHub Actions automatically checks out the repository, sets up Java 17 and Gradle.
-2. It compiles `./gradlew assembleRelease`.
-3. It renames the APK to `LifeRemind-v<version>.apk`.
-4. It attaches the APK under the workflow **Artifacts** tab.
+When you are ready to publish a versioned release:
 
-### Option B: Manual Trigger (`workflow_dispatch`)
-1. Go to your GitHub repository in your browser.
-2. Click the **Actions** tab at the top.
-3. Select **Android Build & Release APK** from the left sidebar.
-4. Click **Run workflow** > select branch `main` > click **Run workflow**.
+1. Create a version tag such as `v1.0.0`:
+   ```bash
+   git tag v1.0.0
+   ```
+2. Push the tag to GitHub:
+   ```bash
+   git push origin v1.0.0
+   ```
+3. **GitHub Actions automatically runs the `Release Android APK` workflow**:
+   - Builds the production release APK.
+   - Automatically creates a new **GitHub Release** titled `LifeRemind v1.0.0`.
+   - Generates release notes automatically from your commit log.
+   - Attaches `app-release.apk` and `LifeRemind-v1.0.0.apk` directly to the release.
+4. Go to **GitHub Repository → Releases → Latest Release (`v1.0.0`)**.
+5. Under **Assets**, click on `app-release.apk` or `LifeRemind-v1.0.0.apk` to download and install on any Android phone or tablet.
 
-### Option C: Tagged Release (`git tag v1.0.0`)
-When you are ready to publish a new release:
+---
+
+### 3. Build APK Locally with Gradle
+
+If you have Android Studio, JDK 17, or the Android command-line tools installed locally:
 
 ```bash
-# Create a release version tag
-git tag v1.0.0
+# Make gradlew executable (macOS / Linux)
+chmod +x gradlew
 
-# Push the tag to GitHub
-git push origin v1.0.0
-```
-
-**What happens automatically:**
-- GitHub Actions triggers on the tag push.
-- Compiles the release APK `LifeRemind-v1.0.0.apk`.
-- Creates a new **GitHub Release `v1.0.0`** with release notes.
-- Attaches `LifeRemind-v1.0.0.apk` directly to the release page.
-
----
-
-## 4. Downloading the Generated APK
-
-### From GitHub Actions Artifacts:
-1. Navigate to the **Actions** tab on your GitHub repository.
-2. Click on the latest completed workflow run.
-3. Scroll down to the **Artifacts** section at the bottom.
-4. Click on `LifeRemind-...apk` to download the zip file containing your APK.
-
-### From GitHub Releases:
-1. On the main page of your repository, click **Releases** (on the right sidebar).
-2. Click on the latest release tag (e.g. `v1.0.0`).
-3. Under **Assets**, click `LifeRemind-v1.0.0.apk` to download and install on any Android device.
-
----
-
-## 🛠 Local Build Commands
-
-```bash
-# Build Debug APK locally
+# Build Debug APK
 ./gradlew assembleDebug
 
-# Build Release APK locally
+# Output location:
+# app/build/outputs/apk/debug/app-debug.apk
+
+# Build Release APK
 ./gradlew assembleRelease
+
+# Output location:
+# app/build/outputs/apk/release/app-release.apk
 ```
+
+On Windows (Command Prompt / PowerShell):
+```cmd
+gradlew.bat assembleDebug
+gradlew.bat assembleRelease
+```
+
+---
+
+### 4. (Optional) Production Release Signing Secrets
+
+By default, the project signs release builds using standard configured Android keys. If you wish to use your own custom production keystore on GitHub Actions:
+
+1. Convert your keystore file to Base64:
+   ```bash
+   # On macOS / Linux:
+   base64 -i my-release-key.jks | tr -d '\n' > keystore_base64.txt
+
+   # On Windows (PowerShell):
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes("my-release-key.jks")) | Set-Content keystore_base64.txt
+   ```
+2. Go to **GitHub Repository** → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
+3. Add the following repository secrets:
+   - `KEYSTORE_BASE64`: Paste the content of `keystore_base64.txt`
+   - `STORE_PASSWORD`: Keystore password
+   - `KEY_ALIAS`: Key alias (e.g., `upload` or `mykey`)
+   - `KEY_PASSWORD`: Key password
